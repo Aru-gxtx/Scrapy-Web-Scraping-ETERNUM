@@ -8,6 +8,9 @@ JSON_FILES = [
     r"eternum\horecaservise_v0.1.json",
     r"eternum\yourroyalhouse.json",
     r"eternum\zakaz.json",
+    r"eternum\tomgast.json",
+    r"eternum\entero.json",
+    r"eternum\liberty.json",
 ]
 EXCEL_FILE = r"sources\ETERNUM.xlsx"
 
@@ -68,10 +71,40 @@ def load_excel():
 
 def pick_best_item(items):
     for item in items:
-        image_url = item.get('image_url', '')
+        image_url = item.get('image_url') or item.get('listing_image_url') or ''
         if isinstance(image_url, str) and image_url.startswith('http'):
             return item
     return items[0] if items else None
+
+
+def get_preferred_price(item):
+    return (
+        item.get('price')
+        or item.get('price_incl_tax')
+        or item.get('price_excl_tax')
+        or ''
+    )
+
+
+def get_preferred_image(item):
+    return item.get('image_url') or item.get('listing_image_url') or ''
+
+
+def get_detail_image(item):
+    detail_image = item.get('detail_image_url')
+    if detail_image:
+        return detail_image
+
+    image_urls = item.get('image_urls')
+    if isinstance(image_urls, list) and image_urls:
+        first_image = image_urls[0]
+        return first_image if isinstance(first_image, str) else ''
+
+    return item.get('listing_image_url') or item.get('image_url') or ''
+
+
+def get_product_url(item):
+    return item.get('url') or item.get('product_page') or ''
 
 def populate_excel(wb, ws, json_data):
     catalog_lookup = {}
@@ -122,7 +155,7 @@ def populate_excel(wb, ws, json_data):
         if json_item:
             try:
                 # F: Image Link (PRIORITY - Column 6)
-                image_url = json_item.get('image_url', '')
+                image_url = get_preferred_image(json_item)
                 ws.cell(row=row_idx, column=COL_IMAGE, value=image_url)
                 
                 # G: Description (Title)
@@ -130,15 +163,15 @@ def populate_excel(wb, ws, json_data):
                 ws.cell(row=row_idx, column=COL_TITLE, value=title)
                 
                 # H: Price
-                price = json_item.get('price', '')
+                price = get_preferred_price(json_item)
                 ws.cell(row=row_idx, column=COL_PRICE, value=price)
                 
                 # I: Product URL
-                url = json_item.get('url', '')
+                url = get_product_url(json_item)
                 ws.cell(row=row_idx, column=COL_URL, value=url)
                 
                 # J: Detail Image Link
-                detail_image = json_item.get('detail_image_url', '')
+                detail_image = get_detail_image(json_item)
                 ws.cell(row=row_idx, column=COL_DETAIL_IMAGE, value=detail_image)
                 
                 # K: Product Page
